@@ -219,6 +219,9 @@ Windows 重寫的部分：
 
 MIT
 
+- 原始 macOS 專案：Copyright (c) 2026 GrapeBear
+- Windows 移植與修改：Copyright (c) 2026 Chaneswin
+
 ---
 
 # Skill Recorder for Windows
@@ -440,3 +443,6 @@ OCR, UI-element inspection, cloud sync, and operation replay are not included.
 ## License
 
 MIT
+
+- Original macOS project: Copyright (c) 2026 GrapeBear
+- Windows port and modifications: Copyright (c) 2026 Chaneswin
