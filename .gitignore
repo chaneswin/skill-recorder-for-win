@@ -4,29 +4,38 @@ __pycache__/
 *$py.class
 *.so
 *.egg-info/
-dist/
 build/
-.eggs/
-*.egg
+dist/
+*.spec
 
-# macOS
+# Local executable and recordings
+/SkillRecorder.exe
+recording_*.md
+skill_recording_*.md
+
+# Virtual environments and local configuration
+venv/
+.venv/
+env/
+.env
+.env.*
+!.env.example
+
+# OS and editor files
 .DS_Store
-.AppleDouble
-.LSOverride
-._*
-
-# IDE
+Thumbs.db
+Desktop.ini
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# Project specific
-recording_*.md
+# Local agent/tool state
 .claude/
+.codex/
+.agents/
+/private/
 
-# Virtual environments
-venv/
-.venv/
-env/
+# Logs
+*.log

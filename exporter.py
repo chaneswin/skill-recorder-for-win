@@ -1,79 +1,49 @@
-from datetime import datetime
+from __future__ import annotations
 
-from models import RecordingSession, ClickEvent, KeyEvent, ScrollEvent
+from pathlib import Path
+
+from models import RecordingSession
 
 
-def export_markdown(session: RecordingSession, output_path: str) -> str:
-    """将录制会话导出为 Markdown 文件"""
-    lines = []
+def _format_offset(start, current) -> str:
+    return f"{(current - start).total_seconds():.1f}s"
 
-    # 头部
-    date_str = datetime.fromtimestamp(session.start_time).strftime("%Y-%m-%d %H:%M:%S")
-    duration = session.duration
-    total = len(session.events)
 
+def export_markdown(session: RecordingSession, output_path: str | Path) -> str:
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+
+    lines: list[str] = []
     lines.append(f"# {session.title}")
     lines.append("")
-    lines.append(f"> 录制时间: {date_str} | 时长: {duration:.1f}s | 步骤数: {total}")
-    if session.metadata:
-        screen = session.metadata.get("screen", "")
-        if screen:
-            lines.append(f"> 屏幕: {screen}")
+    lines.append(f"> Start: {session.started_at:%Y-%m-%d %H:%M:%S}")
+    if session.stopped_at:
+        lines.append(f"> End: {session.stopped_at:%Y-%m-%d %H:%M:%S}")
+    lines.append(f"> Steps: {len(session.events)}")
+    lines.append(f"> Duration: {session.duration_seconds():.1f}s")
     lines.append("")
-    lines.append("---")
+    lines.append("## 給 AI 的任務")
+    lines.append("")
+    lines.append(
+        "請根據下方依時間排序的操作紀錄與畫面，理解這個工作流程，"
+        "整理出目標、前置條件、操作步驟、判斷規則、例外處理與完成條件，"
+        "再將它改寫成可重複使用的程式設計技能或代理人操作說明。"
+    )
+    lines.append("")
+    lines.append("注意：座標與輸入內容是當次示範的證據，不應直接當成永久固定值。")
+    lines.append("")
+    lines.append("## 原始流程紀錄")
     lines.append("")
 
-    # 事件步骤
-    for i, event in enumerate(session.events, 1):
-        relative_time = event.timestamp - session.start_time
-
-        if isinstance(event, ClickEvent):
-            lines.append(f"## 步骤 {i}: 点击 ({event.x}, {event.y})")
-            lines.append(f"**时间:** {relative_time:.1f}s | **按钮:** {event.button}")
-            lines.append("")
-
-        elif isinstance(event, KeyEvent):
-            keys_display = _format_keys(event.keys)
-            lines.append(f"## 步骤 {i}: 键盘输入")
-            lines.append(f"**时间:** {relative_time:.1f}s | **时长:** {event.duration:.1f}s | **按键:** {keys_display}")
-            lines.append("")
-
-        elif isinstance(event, ScrollEvent):
-            direction = "上" if event.dy > 0 else "下"
-            lines.append(f"## 步骤 {i}: 滚动{direction} ({event.x}, {event.y})")
-            lines.append(f"**时间:** {relative_time:.1f}s | **滚动量:** dx={event.dx}, dy={event.dy}")
-            lines.append("")
-
-        # 截图
-        if event.screenshot_b64:
-            lines.append(f"![截图](data:image/jpeg;base64,{event.screenshot_b64})")
-            lines.append("")
-
-        lines.append("---")
+    for index, event in enumerate(session.events, start=1):
+        lines.append(f"### Step {index}: {event.kind}")
+        lines.append(f"- Time: {_format_offset(session.started_at, event.timestamp)}")
+        for key, value in event.meta.items():
+            lines.append(f"- {key}: {value}")
         lines.append("")
+        if event.screenshot_b64:
+            lines.append(f"![screenshot](data:image/jpeg;base64,{event.screenshot_b64})")
+            lines.append("")
 
-    # 总结
-    lines.append("## 录制总结")
-    lines.append("")
-    lines.append(f"- 总步骤数: {total}")
-    lines.append(f"- 总时长: {duration:.1f}s")
-    lines.append(f"- 点击事件: {session.click_count}")
-    lines.append(f"- 键盘输入: {session.key_count}")
-    lines.append(f"- 滚动事件: {session.scroll_count}")
-
-    content = "\n".join(lines)
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(content)
-
-    return output_path
-
-
-def _format_keys(keys: list) -> str:
-    """将按键列表格式化为可读字符串"""
-    result = []
-    for k in keys:
-        if len(k) == 1:
-            result.append(k)
-        else:
-            result.append(f"[{k}]")
-    return " ".join(result)
+    output.write_text("\n".join(lines), encoding="utf-8")
+    return str(output)

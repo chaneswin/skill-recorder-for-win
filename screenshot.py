@@ -1,29 +1,32 @@
+from __future__ import annotations
+
 import base64
 import io
 
 from mss import mss
-from PIL import Image
+from PIL import Image, ImageGrab
 
 
-MAX_WIDTH = 800
-JPEG_QUALITY = 70
+def _grab_screen() -> Image.Image:
+    try:
+        with mss() as sct:
+            monitor = sct.monitors[0]
+            raw = sct.grab(monitor)
+            return Image.frombytes("RGB", raw.size, raw.rgb)
+    except Exception:
+        return ImageGrab.grab(all_screens=True).convert("RGB")
 
 
-def capture_screenshot() -> str:
-    """截取屏幕并返回 base64 编码的 JPEG 字符串"""
-    with mss() as sct:
-        # 截取主显示器
-        monitor = sct.monitors[1]
-        raw = sct.grab(monitor)
-        img = Image.frombytes("RGB", raw.size, raw.bgra, "raw", "BGRX")
+def capture_screen_b64(quality: int = 80, max_width: int = 1600) -> str | None:
+    try:
+        image = _grab_screen()
+    except Exception:
+        return None
 
-    # 缩放到最大宽度
-    if img.width > MAX_WIDTH:
-        ratio = MAX_WIDTH / img.width
-        new_size = (MAX_WIDTH, int(img.height * ratio))
-        img = img.resize(new_size, Image.LANCZOS)
+    if image.width > max_width:
+        ratio = max_width / image.width
+        image = image.resize((max_width, int(image.height * ratio)), Image.Resampling.LANCZOS)
 
-    # 编码为 JPEG
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=JPEG_QUALITY)
-    return base64.b64encode(buf.getvalue()).decode("utf-8")
+    buffer = io.BytesIO()
+    image.save(buffer, format="JPEG", quality=quality, optimize=True)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")

@@ -1,60 +1,28 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Optional
+from datetime import datetime
+from typing import Any, Literal
 
 
-@dataclass
+EventKind = Literal["click", "scroll", "text"]
+
+
+@dataclass(slots=True)
 class RecordedEvent:
-    """录制事件基类"""
-    timestamp: float
-    screenshot_b64: Optional[str] = None
+    kind: EventKind
+    timestamp: datetime
+    screenshot_b64: str | None = None
+    meta: dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
-class ClickEvent(RecordedEvent):
-    """鼠标点击事件"""
-    x: int = 0
-    y: int = 0
-    button: str = "left"  # left, right, middle
-    action: str = "press"  # press, release
-
-
-@dataclass
-class KeyEvent(RecordedEvent):
-    """键盘输入事件（批量合并）"""
-    keys: list = field(default_factory=list)
-    duration: float = 0.0
-
-
-@dataclass
-class ScrollEvent(RecordedEvent):
-    """滚动事件"""
-    x: int = 0
-    y: int = 0
-    dx: int = 0
-    dy: int = 0
-
-
-@dataclass
+@dataclass(slots=True)
 class RecordingSession:
-    """录制会话"""
-    events: list = field(default_factory=list)
-    start_time: float = 0.0
-    end_time: float = 0.0
-    title: str = "Untitled Recording"
-    metadata: dict = field(default_factory=dict)
+    title: str
+    started_at: datetime
+    stopped_at: datetime | None = None
+    events: list[RecordedEvent] = field(default_factory=list)
 
-    @property
-    def duration(self) -> float:
-        return self.end_time - self.start_time
-
-    @property
-    def click_count(self) -> int:
-        return sum(1 for e in self.events if isinstance(e, ClickEvent))
-
-    @property
-    def key_count(self) -> int:
-        return sum(1 for e in self.events if isinstance(e, KeyEvent))
-
-    @property
-    def scroll_count(self) -> int:
-        return sum(1 for e in self.events if isinstance(e, ScrollEvent))
+    def duration_seconds(self) -> float:
+        end = self.stopped_at or datetime.now()
+        return max(0.0, (end - self.started_at).total_seconds())
